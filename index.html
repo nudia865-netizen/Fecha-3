@@ -81,10 +81,12 @@
     grid-template-columns: 42px 1fr 88px 1fr;
     align-items: center;
     gap: 6px;
-    padding: 5px 0;
+    padding: 5px 4px;
     border-bottom: 1px solid rgba(255,255,255,.04);
   }
   .match:last-child { border-bottom: none; }
+  .match:nth-child(odd)  { background: rgba(255,255,255,.025); border-radius: 6px; }
+  .match:nth-child(even) { background: transparent; }
 
   /* Columna izquierda: hora + grupo */
   .match-meta {
@@ -92,17 +94,17 @@
   }
   .match-time { font-size: 10px; color: var(--muted); font-family: monospace; line-height: 1; }
   .group-tag {
-    font-size: 9px; font-weight: 700;
+    font-size: 8px; font-weight: 700;
     color: var(--green); background: var(--green-dim);
     border-radius: 4px; padding: 1px 4px; text-transform: uppercase;
-    line-height: 1.4;
+    line-height: 1.4; white-space: nowrap;
   }
 
   .team { display: flex; flex-direction: column; }
   .team.home { align-items: flex-end; text-align: right; }
   .team.away { align-items: flex-start; }
-  .team-name { font-size: 15px; font-weight: 700; }
-  .flag { font-style: normal; }
+  .team-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .flag-img { width: 22px; height: 16px; border-radius: 2px; object-fit: cover; flex-shrink: 0; }
 
   .score-block { display: flex; align-items: center; justify-content: center; gap: 4px; }
   .score-inputs { display: flex; align-items: center; gap: 4px; }
@@ -185,19 +187,23 @@
 
 <script>
 const FLAGS = {
-  'Suiza': '🇨🇭', 'Canadá': '🇨🇦', 'Bosnia y Herz.': '🇧🇦', 'Qatar': '🇶🇦',
-  'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Brasil': '🇧🇷', 'Marruecos': '🇲🇦', 'Haití': '🇭🇹',
-  'Rep. Checa': '🇨🇿', 'México': '🇲🇽', 'Sudáfrica': '🇿🇦', 'Corea del Sur': '🇰🇷',
-  'Ecuador': '🇪🇨', 'Alemania': '🇩🇪', 'Curazao': '🇨🇼', 'Costa de Marfil': '🇨🇮',
-  'Japón': '🇯🇵', 'Suecia': '🇸🇪', 'Túnez': '🇹🇳', 'Países Bajos': '🇳🇱',
-  'Turquía': '🇹🇷', 'Estados Unidos': '🇺🇸', 'Paraguay': '🇵🇾', 'Australia': '🇦🇺',
-  'Noruega': '🇳🇴', 'Francia': '🇫🇷', 'Senegal': '🇸🇳', 'Irak': '🇮🇶',
-  'Cabo Verde': '🇨🇻', 'Arabia Saudita': '🇸🇦', 'Uruguay': '🇺🇾', 'España': '🇪🇸',
-  'Egipto': '🇪🇬', 'Irán': '🇮🇷', 'Nueva Zelanda': '🇳🇿', 'Bélgica': '🇧🇪',
-  'Panamá': '🇵🇦', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Croacia': '🇭🇷', 'Ghana': '🇬🇭',
-  'Colombia': '🇨🇴', 'Portugal': '🇵🇹', 'R. D. Congo': '🇨🇩', 'Uzbekistán': '🇺🇿',
-  'Argelia': '🇩🇿', 'Austria': '🇦🇹', 'Jordania': '🇯🇴', 'Argentina': '🇦🇷',
+  'Suiza': 'ch', 'Canadá': 'ca', 'Bosnia y Herz.': 'ba', 'Qatar': 'qa',
+  'Escocia': 'gb-sct', 'Brasil': 'br', 'Marruecos': 'ma', 'Haití': 'ht',
+  'Rep. Checa': 'cz', 'México': 'mx', 'Sudáfrica': 'za', 'Corea del Sur': 'kr',
+  'Ecuador': 'ec', 'Alemania': 'de', 'Curazao': 'cw', 'Costa de Marfil': 'ci',
+  'Japón': 'jp', 'Suecia': 'se', 'Túnez': 'tn', 'Países Bajos': 'nl',
+  'Turquía': 'tr', 'Estados Unidos': 'us', 'Paraguay': 'py', 'Australia': 'au',
+  'Noruega': 'no', 'Francia': 'fr', 'Senegal': 'sn', 'Irak': 'iq',
+  'Cabo Verde': 'cv', 'Arabia Saudita': 'sa', 'Uruguay': 'uy', 'España': 'es',
+  'Egipto': 'eg', 'Irán': 'ir', 'Nueva Zelanda': 'nz', 'Bélgica': 'be',
+  'Panamá': 'pa', 'Inglaterra': 'gb-eng', 'Croacia': 'hr', 'Ghana': 'gh',
+  'Colombia': 'co', 'Portugal': 'pt', 'R. D. Congo': 'cd', 'Uzbekistán': 'uz',
+  'Argelia': 'dz', 'Austria': 'at', 'Jordania': 'jo', 'Argentina': 'ar',
 };
+function flagUrl(name) {
+  const code = FLAGS[name];
+  return code ? `https://flagcdn.com/24x18/${code}.png` : null;
+}
 
 const PARTIDOS = [
   { fecha: '2026-06-24', hora: '16:00', grupo: 'B', local: 'Suiza',            visitante: 'Canadá'          },
@@ -247,13 +253,15 @@ PARTIDOS.forEach((p, i) => {
   const row = document.createElement('div');
   row.className = 'match';
   row.dataset.idx = i;
+  const fLocal = flagUrl(p.local);
+  const fVisit = flagUrl(p.visitante);
   row.innerHTML = `
     <div class="match-meta">
       <span class="match-time">${p.hora}</span>
-      <span class="group-tag">G. ${p.grupo}</span>
+      <span class="group-tag">Grupo ${p.grupo}</span>
     </div>
     <div class="team home">
-      <span class="team-name"><span class="flag">${FLAGS[p.local]||''}</span> ${p.local}</span>
+      <span class="team-name">${fLocal ? `<img class="flag-img" src="${fLocal}" alt="">` : ''} ${p.local}</span>
     </div>
     <div class="score-block">
       <div class="score-inputs">
@@ -263,7 +271,7 @@ PARTIDOS.forEach((p, i) => {
       </div>
     </div>
     <div class="team away">
-      <span class="team-name">${p.visitante} <span class="flag">${FLAGS[p.visitante]||''}</span></span>
+      <span class="team-name">${p.visitante} ${fVisit ? `<img class="flag-img" src="${fVisit}" alt="">` : ''}</span>
     </div>`;
   container.appendChild(row);
 });
@@ -294,12 +302,21 @@ function showToast(msg, ok = true) {
 /* ── Canvas export ── */
 document.getElementById('captura').onclick = generarImagen;
 
-function generarImagen() {
+async function generarImagen() {
   const btn = document.getElementById('captura');
   btn.disabled = true;
   btn.textContent = '⏳ Generando…';
 
   try {
+    // Preload all flag images
+    const flagImgCache = {};
+    await Promise.all(Object.entries(FLAGS).map(([name, code]) => new Promise(res => {
+      const img = new Image(); img.crossOrigin = 'anonymous';
+      img.onload = () => { flagImgCache[name] = img; res(); };
+      img.onerror = () => res();
+      img.src = `https://flagcdn.com/24x18/${code}.png`;
+    })));
+
     const scores = [];
     container.querySelectorAll('.match').forEach(row => {
       const gl = row.querySelector('.gl').value;
@@ -424,16 +441,26 @@ function generarImagen() {
 
         if (pi > 0) { ctx.fillStyle = C.sep; ctx.fillRect(PAD*S, y*S, INNER*S, 1*S); }
 
+        // zebra stripe
+        if (pi % 2 === 0) {
+          roundRect(PAD, y+1, INNER, MATCH_H-2, 6);
+          ctx.fillStyle = 'rgba(255,255,255,0.025)'; ctx.fill();
+        }
+
         // hora
         txt(p.hora,        metaX,        my-8,  fm(9),  C.muted, 'center');
         // grupo badge
-        badgeFn('G.'+p.grupo, metaX,     my+8,  C.green, C.greenD);
+        badgeFn('Grupo '+p.grupo, metaX, my+8,  C.green, C.greenD);
 
-        txt((FLAGS[p.local]||'') + ' ' + p.local,       leftEnd-4,    my,   fb(13), C.text,  'right', COL_W-8);
+        txt(p.local,       leftEnd-4,    my,   fb(13), C.text,  'right', COL_W-30);
         scoreBox(p.score.gl, centerX-21, my);
         txt(':',           centerX,      my,   fb(16), C.muted, 'center');
         scoreBox(p.score.gv, centerX+21, my);
-        txt(p.visitante + ' ' + (FLAGS[p.visitante]||''),   rightStart+4, my,   fb(13), C.text,  'left',  COL_W-8);
+        txt(p.visitante,   rightStart+4+26, my,   fb(13), C.text,  'left',  COL_W-30);
+
+        const FW = 22, FH = 16;
+        if (flagImgCache[p.local])     ctx.drawImage(flagImgCache[p.local],     (leftEnd-2)*S,        (my-FH/2)*S, FW*S, FH*S);
+        if (flagImgCache[p.visitante]) ctx.drawImage(flagImgCache[p.visitante], (rightStart+4)*S,     (my-FH/2)*S, FW*S, FH*S);
 
         y += MATCH_H;
       });
